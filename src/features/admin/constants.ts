@@ -1,5 +1,5 @@
 export const ADMIN_TOKEN_KEY = "adminToken";
-export const ADMIN_COLLECTION_LIMIT = 200;
+export const ADMIN_COLLECTION_LIMIT = 20;
 
 export const ADMIN_ROLES = [
   { value: "SUPER_ADMIN", label: "Super Admin" },
