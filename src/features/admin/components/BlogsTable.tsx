@@ -227,7 +227,7 @@ export function BlogsTable({
                     <div className="flex items-center justify-end gap-2">
                       {blog.status === "PUBLISHED" ? (
                         <a
-                          href={`/blog/${blog.slug}`}
+                          href={`https://campytech.com/blog/${blog.slug}`}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-cyan-700 transition hover:bg-cyan-50"
