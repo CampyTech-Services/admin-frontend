@@ -17,6 +17,7 @@ import { FinancePanel } from "../components/FinancePanel";
 import { NoticeBanner } from "../components/NoticeBanner";
 import { StatsGrid } from "../components/StatsGrid";
 import { StudentPlatformPanel } from "../components/StudentPlatformPanel";
+import { StudentPortalAdminPanel } from "../components/StudentPortalAdminPanel";
 import { TagsPanel } from "../components/TagsPanel";
 import { TeamManagementPanel } from "../components/TeamManagementPanel";
 import { useAdminPanel } from "../hooks/useAdminPanel";
@@ -78,6 +79,7 @@ export function AdminPage() {
     success,
     stats,
     latestPublishedBlog,
+    authToken,
     canUploadImages,
     setShowPassword,
     setLoginData,
@@ -214,6 +216,7 @@ export function AdminPage() {
               onOpenStudentPlatform={() =>
                 setCurrentView(ADMIN_VIEWS.STUDENT_PLATFORM)
               }
+              onOpenStudents={() => setCurrentView(ADMIN_VIEWS.STUDENTS)}
             />
 
             {isLoggedIn && !canManageBlogs ? (
@@ -351,6 +354,10 @@ export function AdminPage() {
                 onToggle={handleToggleStudentPlatform}
                 onRefresh={refreshDashboard}
               />
+            ) : null}
+
+            {currentView === ADMIN_VIEWS.STUDENTS && isSuperAdmin ? (
+              <StudentPortalAdminPanel token={authToken} />
             ) : null}
 
             {currentView === ADMIN_VIEWS.FINANCES && isSuperAdmin ? (

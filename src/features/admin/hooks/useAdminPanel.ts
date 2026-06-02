@@ -981,6 +981,36 @@ export function useAdminPanel() {
     }
   }
 
+  async function handleToggleStudentFeature(featureKey, isEnabled) {
+    if (!isSuperAdmin) {
+      setError("Only a super admin can update Student OS features.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const updatedSettings = await updateStudentPlatformSettings(authToken, {
+        features: {
+          [featureKey]: isEnabled,
+        },
+      });
+      setStudentPlatformSettings(updatedSettings);
+      setSuccess("Student OS feature updated.");
+    } catch (studentPlatformError) {
+      setError(
+        getErrorMessage(
+          studentPlatformError,
+          "Failed to update Student OS feature.",
+        ),
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const blogItems = useMemo(() => sortByLatest(blogs.items), [blogs.items]);
   const latestPublishedBlog = useMemo(
     () => blogItems.find((blog) => blog.status === "PUBLISHED") || null,
@@ -1105,6 +1135,7 @@ export function useAdminPanel() {
     handleEditCourse,
     handleDeleteCourse,
     handleToggleStudentPlatform,
+    handleToggleStudentFeature,
     openCreateView,
     resetForm,
     resetCategoryForm,

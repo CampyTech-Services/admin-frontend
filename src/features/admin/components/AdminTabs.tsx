@@ -3,6 +3,7 @@ import {
   DownloadCloud,
   FileText,
   FolderOpen,
+  GraduationCap,
   Lightbulb,
   PenSquare,
   Rocket,
@@ -28,6 +29,7 @@ export function AdminTabs({
   onOpenFeedback,
   onOpenCourses,
   onOpenStudentPlatform,
+  onOpenStudents,
 }) {
   const tabs = [
     {
@@ -77,6 +79,13 @@ export function AdminTabs({
             helper: "Launch switch",
             icon: Rocket,
             onClick: onOpenStudentPlatform,
+          },
+          {
+            id: ADMIN_VIEWS.STUDENTS,
+            label: "Students",
+            helper: "Profiles + audit",
+            icon: GraduationCap,
+            onClick: onOpenStudents,
           },
           {
             id: ADMIN_VIEWS.TEAM,

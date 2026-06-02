@@ -156,6 +156,93 @@ export async function getStudentPlatformSettings(token) {
   return response.data;
 }
 
+export async function getRegisteredStudents(token, params: any = {}) {
+  const response = await apiClient.get(
+    "/admin/student-portal/students",
+    withToken(token, {
+      params: { page: 1, limit: ADMIN_COLLECTION_LIMIT, ...params },
+    }),
+  );
+  return normalizeAdminCollection(response.data);
+}
+
+export async function updateRegisteredStudentVerification(token, studentId, payload) {
+  const response = await apiClient.put(
+    `/admin/student-portal/students/${studentId}/verification`,
+    payload,
+    withToken(token),
+  );
+  return response.data;
+}
+
+export async function getAdmissionApplications(token) {
+  const response = await apiClient.get(
+    "/admin/student-portal/admission-applications",
+    withToken(token, { params: { page: 1, limit: ADMIN_COLLECTION_LIMIT } }),
+  );
+  return normalizeAdminCollection(response.data);
+}
+
+export async function updateAdmissionApplicationStatus(token, applicationId, payload) {
+  const response = await apiClient.put(
+    `/admin/student-portal/admission-applications/${applicationId}`,
+    payload,
+    withToken(token),
+  );
+  return response.data;
+}
+
+export async function getStudentTransactions(token) {
+  const response = await apiClient.get(
+    "/admin/student-portal/transactions",
+    withToken(token, { params: { page: 1, limit: ADMIN_COLLECTION_LIMIT } }),
+  );
+  return normalizeAdminCollection(response.data);
+}
+
+export async function getMarketplaceListings(token) {
+  const response = await apiClient.get(
+    "/admin/student-portal/marketplace",
+    withToken(token, { params: { page: 1, limit: ADMIN_COLLECTION_LIMIT } }),
+  );
+  return normalizeAdminCollection(response.data);
+}
+
+export async function updateMarketplaceListingStatus(token, listingId, payload) {
+  const response = await apiClient.put(
+    `/admin/student-portal/marketplace/${listingId}`,
+    payload,
+    withToken(token),
+  );
+  return response.data;
+}
+
+export async function getMarketplaceOrders(token) {
+  const response = await apiClient.get(
+    "/admin/student-portal/marketplace-orders",
+    withToken(token, { params: { page: 1, limit: ADMIN_COLLECTION_LIMIT } }),
+  );
+  return normalizeAdminCollection(response.data);
+}
+
+export async function updateMarketplaceOrderStatus(token, orderId, payload) {
+  const response = await apiClient.put(
+    `/admin/student-portal/marketplace-orders/${orderId}`,
+    payload,
+    withToken(token),
+  );
+  return response.data;
+}
+
+export async function sendPersonalizedStudentEmail(token, payload) {
+  const response = await apiClient.post(
+    "/admin/student-portal/emails",
+    payload,
+    withToken(token),
+  );
+  return response.data;
+}
+
 export async function updateStudentPlatformSettings(token, payload) {
   const response = await apiClient.put(
     "/admin/student-platform",

@@ -33,6 +33,7 @@ export const ADMIN_VIEWS = {
   FEEDBACK: "feedback",
   COURSES: "courses",
   STUDENT_PLATFORM: "student-platform",
+  STUDENTS: "students",
 };
 
 export const EMPTY_LOGIN_FORM = {
