@@ -175,6 +175,15 @@ export async function updateRegisteredStudentVerification(token, studentId, payl
   return response.data;
 }
 
+export async function updateStudentAdmissionRoadmap(token, studentId, payload) {
+  const response = await apiClient.put(
+    `/admin/student-portal/students/${studentId}/admission-roadmap`,
+    payload,
+    withToken(token),
+  );
+  return response.data;
+}
+
 export async function getAdmissionApplications(token) {
   const response = await apiClient.get(
     "/admin/student-portal/admission-applications",

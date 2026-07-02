@@ -6,6 +6,7 @@ import {
   getRegisteredStudents,
   getStudentTransactions,
   sendPersonalizedStudentEmail,
+  updateStudentAdmissionRoadmap,
   updateAdmissionApplicationStatus,
   updateMarketplaceListingStatus,
   updateMarketplaceOrderStatus,
@@ -30,6 +31,69 @@ const admissionStatuses = [
   "REJECTED",
   "CLOSED",
 ];
+const roadmapStages = [
+  "PROFILE",
+  "RESULT_REVIEW",
+  "SCHOOL_FIT",
+  "POST_UTME",
+  "CAREER_FOUNDATION",
+];
+const roadmapFitSignals = [
+  "INCOMPLETE_PROFILE",
+  "NEEDS_BACKUP",
+  "STRONG_FIT",
+  "SCHOLARSHIP_READY",
+];
+
+function listToText(items = []) {
+  return Array.isArray(items) ? items.join(", ") : "";
+}
+
+function textToList(value = "") {
+  return [
+    ...new Set(
+      value
+        .split(/[\n,]/)
+        .map((item) => item.trim())
+        .filter(Boolean),
+    ),
+  ].slice(0, 8);
+}
+
+function buildRoadmapDraft(student) {
+  const roadmap = student.admissionRoadmap || {};
+
+  return {
+    stage: roadmap.stage || "PROFILE",
+    fitSignal: roadmap.fitSignal || "INCOMPLETE_PROFILE",
+    targetSchoolsText: listToText(roadmap.targetSchools),
+    backupSchoolsText: listToText(roadmap.backupSchools),
+    scholarshipReady: Boolean(roadmap.scholarshipReady),
+    recommendedNextAction: roadmap.recommendedNextAction || "",
+    adminNotes: roadmap.adminNotes || "",
+  };
+}
+
+function buildGuardianUpdateMessage(student, draft) {
+  const stage = String(draft?.stage || student.admissionRoadmap?.stage || "PROFILE").replace(/_/g, " ");
+  const signal = String(draft?.fitSignal || student.admissionRoadmap?.fitSignal || "INCOMPLETE_PROFILE").replace(/_/g, " ");
+  const backupSchools = textToList(draft?.backupSchoolsText || "");
+  const nextAction =
+    draft?.recommendedNextAction ||
+    student.admissionRoadmap?.recommendedNextAction ||
+    "CampyTech is reviewing the next best admission action.";
+
+  return [
+    `Hello, this is a CampyTech admission roadmap update for ${student.fullName}.`,
+    `Current stage: ${stage}.`,
+    `Admission signal: ${signal}.`,
+    `Next action: ${nextAction}`,
+    backupSchools.length ? `Backup schools: ${backupSchools.join(", ")}.` : "",
+    "This is guidance from CampyTech and does not guarantee admission or scholarship approval.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
 
 export function StudentPortalAdminPanel({ token }) {
   const [students, setStudents] = useState({ items: [], total: 0 });
@@ -49,6 +113,7 @@ export function StudentPortalAdminPanel({ token }) {
     subject: "",
     body: "",
   });
+  const [roadmapDrafts, setRoadmapDrafts] = useState({});
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -105,6 +170,14 @@ export function StudentPortalAdminPanel({ token }) {
           getMarketplaceOrders(token),
         ]);
       setStudents(studentData);
+      setRoadmapDrafts(
+        Object.fromEntries(
+          (studentData.items || []).map((student) => [
+            student.id,
+            buildRoadmapDraft(student),
+          ]),
+        ),
+      );
       setApplications(applicationData);
       setTransactions(transactionData);
       setMarketplaceListings(listingData);
@@ -139,6 +212,57 @@ export function StudentPortalAdminPanel({ token }) {
           "Unable to update student profile.",
       );
     }
+  }
+
+  function updateRoadmapDraft(studentId, field, value) {
+    setRoadmapDrafts((current) => ({
+      ...current,
+      [studentId]: {
+        ...(current[studentId] || {}),
+        [field]: value,
+      },
+    }));
+  }
+
+  async function saveRoadmap(studentId) {
+    const draft = roadmapDrafts[studentId] || {};
+
+    try {
+      await updateStudentAdmissionRoadmap(token, studentId, {
+        stage: draft.stage,
+        fitSignal: draft.fitSignal,
+        targetSchools: textToList(draft.targetSchoolsText),
+        backupSchools: textToList(draft.backupSchoolsText),
+        scholarshipReady: Boolean(draft.scholarshipReady),
+        recommendedNextAction: draft.recommendedNextAction,
+        adminNotes: draft.adminNotes,
+      });
+      setMessage("Admission roadmap updated.");
+      await loadData();
+    } catch (roadmapError) {
+      setError(
+        roadmapError?.response?.data?.message ||
+          roadmapError?.message ||
+          "Unable to update admission roadmap.",
+      );
+    }
+  }
+
+  function draftGuardianUpdate(student) {
+    const draft = roadmapDrafts[student.id] || buildRoadmapDraft(student);
+    const body = buildGuardianUpdateMessage(student, draft);
+
+    setEmailForm({
+      studentId: student.id,
+      subject: `CampyTech admission roadmap update for ${student.fullName}`,
+      body,
+    });
+
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(body).catch(() => undefined);
+    }
+
+    setMessage("Guardian update drafted. It is also ready to paste into WhatsApp.");
   }
 
   async function updateAdmissionStatus(applicationId, status) {
@@ -264,7 +388,10 @@ export function StudentPortalAdminPanel({ token }) {
             Registered students
           </h3>
           <div className="mt-4 space-y-3">
-            {students.items.map((student) => (
+            {students.items.map((student) => {
+              const draft = roadmapDrafts[student.id] || buildRoadmapDraft(student);
+
+              return (
               <article
                 key={student.id}
                 className="rounded-2xl border border-slate-200 p-4"
@@ -312,8 +439,110 @@ export function StudentPortalAdminPanel({ token }) {
                     ))}
                   </select>
                 </div>
+
+                <div className="mt-4 rounded-2xl bg-slate-50 p-4">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-700">
+                        Admission roadmap
+                      </p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        Update stage, fit signal, backups, and guardian message.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => draftGuardianUpdate(student)}
+                        className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700"
+                      >
+                        Draft guardian update
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => saveRoadmap(student.id)}
+                        className="rounded-full bg-slate-950 px-4 py-2 text-xs font-semibold text-white"
+                      >
+                        Save roadmap
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    <select
+                      value={draft.stage}
+                      onChange={(event) =>
+                        updateRoadmapDraft(student.id, "stage", event.target.value)
+                      }
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                    >
+                      {roadmapStages.map((stage) => (
+                        <option key={stage} value={stage}>
+                          {stage.replace(/_/g, " ")}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={draft.fitSignal}
+                      onChange={(event) =>
+                        updateRoadmapDraft(student.id, "fitSignal", event.target.value)
+                      }
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                    >
+                      {roadmapFitSignals.map((signal) => (
+                        <option key={signal} value={signal}>
+                          {signal.replace(/_/g, " ")}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      value={draft.targetSchoolsText}
+                      onChange={(event) =>
+                        updateRoadmapDraft(student.id, "targetSchoolsText", event.target.value)
+                      }
+                      placeholder="Target schools, separated by commas"
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                    />
+                    <input
+                      value={draft.backupSchoolsText}
+                      onChange={(event) =>
+                        updateRoadmapDraft(student.id, "backupSchoolsText", event.target.value)
+                      }
+                      placeholder="Backup schools, separated by commas"
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                    />
+                    <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={draft.scholarshipReady}
+                        onChange={(event) =>
+                          updateRoadmapDraft(student.id, "scholarshipReady", event.target.checked)
+                        }
+                      />
+                      <span>Scholarship-ready</span>
+                    </label>
+                    <input
+                      value={draft.recommendedNextAction}
+                      onChange={(event) =>
+                        updateRoadmapDraft(student.id, "recommendedNextAction", event.target.value)
+                      }
+                      placeholder="Recommended next action"
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                    />
+                    <textarea
+                      value={draft.adminNotes}
+                      onChange={(event) =>
+                        updateRoadmapDraft(student.id, "adminNotes", event.target.value)
+                      }
+                      rows={3}
+                      placeholder="Internal roadmap notes"
+                      className="resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm md:col-span-2"
+                    />
+                  </div>
+                </div>
               </article>
-            ))}
+            );
+            })}
           </div>
         </section>
 
